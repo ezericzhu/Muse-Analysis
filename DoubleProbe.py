@@ -26,7 +26,7 @@ class DoubleProbe():
         data = np.genfromtxt(fin,delimiter=',')
 
         time_long, AI0, AI1, AI2, AI3, AO0, AO1 = data.T  # s
-        self.time_unix = time_long
+        self.unix_time = time_long
         self.AI0 = AI0  # pressure
         self.AI1 = AI1  # bias request
         self.AI2 = AI2  # bias
@@ -37,9 +37,10 @@ class DoubleProbe():
         self.time = time_long - time_long[0] # seconds
 
     def filterIV(self, t0=2, # crop start time
-                            t1=7, # crop finish time
-                            sg_window = 50, # savgol window
-                            sg_order = 3, # savgol polynomial order
+                       t1=7, # crop finish time
+                       sg_window = 50, # savgol window
+                       sg_order = 3, # savgol polynomial order
+                       save = False,
                       ):
 
         # should code the conversion in ONE place to avoid bugs
@@ -98,10 +99,12 @@ class DoubleProbe():
 
         axs[2].set_ylim( 1.1*np.min(I_cut), 1.1*np.max(I_cut) )
 
+        if save:
+            self.fig_IV.savefig(save)
 
     def plotRaw(self, save=False):
 
-        time_long = self.time_unix
+        time_long = self.unix_time
         pressure = self.AI0
         V_bias_request = self.AI1 
         V_bias = self.AI2
@@ -154,6 +157,7 @@ class DoubleProbe():
             fig.savefig(save)
 
         self.ax_IV = [ax1,ax2,ax3]
+        self.fig_IV = fig
 
     def plotPressure(self, save=False):
 
