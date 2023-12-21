@@ -10,6 +10,11 @@ class OceanSpectra():
         self.loadData(fin)
 
 
+        # for plotting peaks
+        self.lines = []
+        self.freqs = []
+
+
     def loadData(self,fin):
 
         with open(fin) as f:
@@ -62,6 +67,28 @@ class OceanSpectra():
         self.dt = float(meta['Integration Time (sec)'])
         self.time_axis = unix_time - unix_time[0] # ms
         self.spectral_axis = spectral_axis
+
+    def findPeak(self,f0=656.363, # nm
+                 ):
+
+        # H-alpha 656.363 approx
+        # H-beta 486.0675 approx
+
+        freq = self.spectral_axis
+        j0 = np.argmin( np.abs(freq - f0) )
+
+        f_time = self.data[:,j0] 
+
+        self.lines.append(f_time)
+        self.freqs.append(f0)
+
+    def plotPeaks(self, axs):
+        # plot identified freq peaks over time
+        time = self.time_axis
+
+        N_lines = len(self.lines)
+        for j in np.arange(N_lines):
+            axs.plot(time, self.lines[j], label=f"{self.freqs[j]} nm")
 
     def plot2d(self, j=50, save=False):
 
