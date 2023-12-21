@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import sys
 
 from matplotlib.gridspec import GridSpec
+from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
 
 '''
 Muse Data Analysis Script
@@ -33,6 +35,69 @@ class DoubleProbe():
         self.AO1 = AO1  # unused
 
         self.time = time_long - time_long[0] # seconds
+
+    def filterIV(self, t0=2, # crop start time
+                            t1=7, # crop finish time
+                            sg_window = 50, # savgol window
+                            sg_order = 3, # savgol polynomial order
+                      ):
+
+        # should code the conversion in ONE place to avoid bugs
+        V_probe = self.AI2*10  # V
+        I_probe = self.AI3/5*97.8757 # mA
+        time = self.time # s
+
+        def argNear(arr,val):
+            return np.argmin( np.abs(arr - val) )
+
+        t0_idx = argNear(time,t0)
+        t1_idx = argNear(time,t1)
+
+        # cut
+        V_cut = V_probe[t0_idx:t1_idx]
+        I_cut = I_probe[t0_idx:t1_idx]
+        t_cut = time[t0_idx:t1_idx]
+
+        # filter
+        V_filter = savgol_filter(V_cut, sg_window, sg_order)
+        I_filter = savgol_filter(I_cut, sg_window, sg_order)
+
+        # fit
+        def IV_tanh(Vbias,Te,Isat,I_offset):
+            return Isat * np.tanh( Vbias / 2 / Te ) + I_offset
+        param, cov = curve_fit(IV_tanh, V_filter, I_filter)
+        param2, cov2 = curve_fit(IV_tanh, V_cut, I_cut)
+
+        I_fit = IV_tanh(V_filter,*param)
+        I_fit2 = IV_tanh(V_filter,*param2)
+
+
+        # plot
+        axs = self.ax_IV
+        axs[0].plot(t_cut, V_cut, 'C3.', ms=1)
+        axs[1].plot(t_cut, I_cut, 'C3.', ms=1)
+        axs[2].plot(V_cut, I_cut, 'C3.', ms=1)
+
+        axs[0].plot(t_cut, V_filter, 'C2--', lw=0.5)
+        axs[1].plot(t_cut, I_filter, 'C2--', lw=0.5)
+        axs[2].plot(V_cut, I_filter, 'C2--', lw=2, label=f"(win,order) = {sg_window}, {sg_order}")
+
+        Te, Isat, I_offset = param
+        axs[2].plot(V_cut, I_fit, 'C1:', ms=12, label=f"(Te, Isat, Ioffset) = {Te:.1f} eV, {Isat:.3f} mA, {I_offset:.2f} mA")
+
+        Te, Isat, I_offset = param2
+
+        err2 = np.sqrt( np.diag(cov2) )
+        dT, dIsat, dIoff = err2
+        axs[2].plot(V_cut, I_fit2, 'C1--', ms=12, label="fit")
+        axs[2].plot([],[],' ', label=rf"Te = {Te:.1f}$\pm${dT:.1f} eV")
+        axs[2].plot([],[],' ', label=rf"Isat = {Isat:.2f}$\pm${dIsat:.2f} mA")
+        axs[2].plot([],[],' ', label=rf"I_offset = {I_offset:.2f}$\pm${dIoff:.2f} mA")
+
+        axs[2].legend()
+
+        axs[2].set_ylim( 1.1*np.min(I_cut), 1.1*np.max(I_cut) )
+
 
     def plotRaw(self, save=False):
 
@@ -73,6 +138,9 @@ class DoubleProbe():
         ax2.plot(time, I_probe, 'C1.', label='mA')
         ax3.plot(V_probe, I_probe, 'C4.')
 
+#        if np.min(I_probe) < -5:
+#            m = np.max(I_probe)
+#            ax3.set_ylim(-1, 1.1*m)
         ax2.set_xlabel('time [s]')
         ax3.set_ylabel('mA')
         ax3.set_xlabel('V')
@@ -85,6 +153,8 @@ class DoubleProbe():
         if save:
             fig.savefig(save)
 
+        self.ax_IV = [ax1,ax2,ax3]
+
     def plotPressure(self, save=False):
 
         V = self.AI0
@@ -96,7 +166,7 @@ class DoubleProbe():
         fig,axs = plt.subplots(1,1)
         axs.plot(time, P_raw, '.', label="pressure raw")
         axs.plot(time, P_H2, '.', label="pressure H2")
-
+  
         axs.set_ylabel('Torr')
         axs.set_xlabel('s')
         plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0) )
@@ -120,6 +190,7 @@ if __name__ == '__main__':
     
     data.plotRaw()
     data.plotIV()
+    data.filterIV()
     data.plotPressure()
     
     plt.show()
