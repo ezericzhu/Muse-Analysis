@@ -7,9 +7,12 @@ from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 
 '''
-Muse Data Analysis Script
+Muse Analysis for NIDAC data
+usage: python MuseAnalysis/DoubleProbe.py data/231219083/
 
-T Qian, 19 Dec 2023
+be sure to include '/' at end of shot path
+
+Updated 22 Dec 2023
 '''
 
 
@@ -36,12 +39,20 @@ class DoubleProbe():
 
         self.time = time_long - time_long[0] # seconds
 
+        # interpret
+        self.V = self.AI2*10  # V
+        self.I = self.AI3/5*97.8757 # mA
+
     def filterIV(self, t0=2, # crop start time
                        t1=7, # crop finish time
                        sg_window = 50, # savgol window
                        sg_order = 3, # savgol polynomial order
+                       plot = True,
                        save = False,
                       ):
+        '''
+        Add filtering and fits to I-V trace.
+        '''
 
         # should code the conversion in ONE place to avoid bugs
         V_probe = self.AI2*10  # V
@@ -74,35 +85,39 @@ class DoubleProbe():
 
 
         # plot
-        axs = self.ax_IV
-        axs[0].plot(t_cut, V_cut, 'C3.', ms=1)
-        axs[1].plot(t_cut, I_cut, 'C3.', ms=1)
-        axs[2].plot(V_cut, I_cut, 'C3.', ms=1)
-
-        axs[0].plot(t_cut, V_filter, 'C2--', lw=0.5)
-        axs[1].plot(t_cut, I_filter, 'C2--', lw=0.5)
-        axs[2].plot(V_cut, I_filter, 'C2--', lw=2, label=f"(win,order) = {sg_window}, {sg_order}")
-
-        Te, Isat, I_offset = param
-        axs[2].plot(V_cut, I_fit, 'C1:', ms=12, label=f"(Te, Isat, Ioffset) = {Te:.1f} eV, {Isat:.3f} mA, {I_offset:.2f} mA")
-
-        Te, Isat, I_offset = param2
-
-        err2 = np.sqrt( np.diag(cov2) )
-        dT, dIsat, dIoff = err2
-        axs[2].plot(V_cut, I_fit2, 'C1--', ms=12, label="fit")
-        axs[2].plot([],[],' ', label=rf"Te = {Te:.1f}$\pm${dT:.1f} eV")
-        axs[2].plot([],[],' ', label=rf"Isat = {Isat:.2f}$\pm${dIsat:.2f} mA")
-        axs[2].plot([],[],' ', label=rf"I_offset = {I_offset:.2f}$\pm${dIoff:.2f} mA")
-
-        axs[2].legend()
-
-        axs[2].set_ylim( 1.1*np.min(I_cut), 1.1*np.max(I_cut) )
-
-        if save:
-            self.fig_IV.savefig(save)
+        if plot:
+            axs = self.ax_IV
+            axs[0].plot(t_cut, V_cut, 'C3.', ms=1)
+            axs[1].plot(t_cut, I_cut, 'C3.', ms=1)
+            axs[2].plot(V_cut, I_cut, 'C3.', ms=1)
+    
+            axs[0].plot(t_cut, V_filter, 'C2--', lw=0.5)
+            axs[1].plot(t_cut, I_filter, 'C2--', lw=0.5)
+            axs[2].plot(V_cut, I_filter, 'C2--', lw=2, label=f"(win,order) = {sg_window}, {sg_order}")
+    
+            Te, Isat, I_offset = param
+            axs[2].plot(V_cut, I_fit, 'C1:', ms=12, label=f"(Te, Isat, Ioffset) = {Te:.1f} eV, {Isat:.3f} mA, {I_offset:.2f} mA")
+    
+            Te, Isat, I_offset = param2
+    
+            err2 = np.sqrt( np.diag(cov2) )
+            dT, dIsat, dIoff = err2
+            axs[2].plot(V_cut, I_fit2, 'C1--', ms=12, label="fit")
+            axs[2].plot([],[],' ', label=rf"Te = {Te:.1f}$\pm${dT:.1f} eV")
+            axs[2].plot([],[],' ', label=rf"Isat = {Isat:.2f}$\pm${dIsat:.2f} mA")
+            axs[2].plot([],[],' ', label=rf"I_offset = {I_offset:.2f}$\pm${dIoff:.2f} mA")
+    
+            axs[2].legend()
+    
+            axs[2].set_ylim( 1.1*np.min(I_cut), 1.1*np.max(I_cut) )
+    
+            if save:
+                self.fig_IV.savefig(save)
 
     def plotRaw(self, save=False):
+        '''
+        Show raw data from all NIdac channels.
+        '''
 
         time_long = self.unix_time
         pressure = self.AI0
@@ -141,9 +156,6 @@ class DoubleProbe():
         ax2.plot(time, I_probe, 'C1.', label='mA')
         ax3.plot(V_probe, I_probe, 'C4.')
 
-#        if np.min(I_probe) < -5:
-#            m = np.max(I_probe)
-#            ax3.set_ylim(-1, 1.1*m)
         ax2.set_xlabel('time [s]')
         ax3.set_ylabel('mA')
         ax3.set_xlabel('V')
@@ -159,30 +171,43 @@ class DoubleProbe():
         self.ax_IV = [ax1,ax2,ax3]
         self.fig_IV = fig
 
-    def plotPressure(self, save=False):
+    def plotPressure(self, axs=None,
+                           sg_window = 50, # savgol window
+                           sg_order = 3, # savgol polynomial order
+                           plotRaw = False, # show the unscaled pressure data
+                           t_global = False, # use global time ref to match other diagnostics
+                           save = False,
+                           ):
 
         V = self.AI0
-        time = self.time
+
+        if t_global:
+            time = t_global
+        else:
+           time = self.time
 
         P_raw = 10**((V - 5.5)/0.5)
         P_H2 = P_raw / 0.42
 
-        fig,axs = plt.subplots(1,1)
-        axs.plot(time, P_raw, '.', label="pressure raw")
-        axs.plot(time, P_H2, '.', label="pressure H2")
+        # use savgol filter
+        P_raw_filter = savgol_filter(P_raw, sg_window, sg_order)
+        P_H2_filter = savgol_filter(P_H2, sg_window, sg_order)
+
+        if axs==None:
+            fig,axs = plt.subplots(1,1)
+        axs.plot(time, P_H2, 'C0.', label="pressure H2")
+        axs.plot(time, P_H2_filter, 'C1.')
+
+        if plotRaw:
+            axs.plot(time, P_raw, 'C2.', label="pressure observed (N2)")
+            axs.plot(time, P_raw_filter, 'C4.')
   
         axs.set_ylabel('Torr')
         axs.set_xlabel('s')
-        plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0) )
-        # how to make y-axis in sci notation?
-        # plt.gca().ticklabel_format(axis='y', style='sci',
+        axs.ticklabel_format(axis='y', style='sci', scilimits=(0,0) )
 
-
-        plt.legend()
-        plt.grid()
-
-        fig.suptitle(self.fname)
-        fig.tight_layout()
+        axs.legend()
+        axs.grid()
 
         if save:
             fig.savefig(save)
