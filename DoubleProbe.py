@@ -43,7 +43,10 @@ class DoubleProbe():
         self.V = self.AI2*10  # V
         self.I = self.AI3/5*97.8757 # mA
 
-    def plotRaw(self, save=False):
+    def plotRaw(self,
+                     sg_window = 50, # savgol window
+                     sg_order = 3, # savgol polynomial order
+                      save=False):
         '''
         Show raw data from all NIdac channels.
         '''
@@ -54,14 +57,26 @@ class DoubleProbe():
         V_bias = self.AI2
         V_shunt = self.AI3
 
+        # fits
+        fpressure = savgol_filter(pressure, sg_window, sg_order)
+        fV_bias_request = savgol_filter(V_bias_request, sg_window, sg_order)
+        fV_bias = savgol_filter(V_bias, sg_window, sg_order)
+        fV_shunt = savgol_filter(V_shunt, sg_window, sg_order)
 
         # raw data 
         fig,axs = plt.subplots(5,1, figsize=(10,6))
-        axs[0].plot(time_long, label='time')
-        axs[1].plot(pressure, label='pressure')
-        axs[2].plot(V_bias_request, label='bias request') #5x
-        axs[3].plot(V_bias, label='bias') # 10x
-        axs[4].plot(V_shunt, label='shunt') # divide by 5, multiply 97 gain, divide by 1kOhm
+        axs[0].plot(time_long, '.', label='time')
+        axs[1].plot(pressure, '.', label='pressure')
+        axs[2].plot(V_bias_request, '.', label='bias request') #5x
+        axs[3].plot(V_bias, '.', label='bias') # 10x
+        axs[4].plot(V_shunt, '.', label='shunt') # divide by 5, multiply 97 gain, divide by 1kOhm
+
+        axs[1].plot(fpressure, 'C2--')
+        axs[2].plot(fV_bias_request, 'C2--')
+        axs[3].plot(fV_bias, 'C2--')
+        axs[4].plot(fV_shunt, 'C2--')
+        
+        axs[-1].set_ylabel("integer count")
         [a.legend(loc=0) for a in axs]
         fig.suptitle(self.fname)
         plt.tight_layout()
