@@ -24,7 +24,10 @@ class DoubleProbe():
         self.loadData(fin)
 
 
-    def loadData(self,fin):
+    def loadData(self,fin, 
+                      V_FACTOR=10, # to V
+                      I_FACTOR=97.8757/5, # to mA
+                    ):
 
         data = np.genfromtxt(fin,delimiter=',')
 
@@ -40,8 +43,12 @@ class DoubleProbe():
         self.time = time_long - time_long[0] # seconds
 
         # interpret
-        self.V = self.AI2*10  # V
-        self.I = self.AI3/5*97.8757 # mA
+        self.V = self.AI2*V_FACTOR  # V 
+        self.I = self.AI3*I_FACTOR # mA
+
+        self.V_factor = V_FACTOR
+        self.I_factor = I_FACTOR
+   
 
     def plotRaw(self,
                      sg_window = 50, # savgol window
@@ -99,8 +106,8 @@ class DoubleProbe():
         '''
 
         # should code the conversion in ONE place to avoid bugs
-        V_probe = self.AI2*10  # V
-        I_probe = self.AI3/5*97.8757 # mA
+        V_probe = self.AI2 * self.V_factor  # V
+        I_probe = self.AI3 * self.I_factor # mA
         time = self.time # s
 
         def argNear(arr,val):
@@ -195,8 +202,8 @@ class DoubleProbe():
         else:
            time = self.time
 
-        P_raw = 10**((V - 5.5)/0.5)
-        P_H2 = P_raw / 0.42
+        P_raw = 10**((V - 5.5)/0.5) # V -> P conversion from manual
+        P_H2 = P_raw / 0.42 # -> H2 scale factor from manual
 
         # use savgol filter
         P_raw_filter = savgol_filter(P_raw, sg_window, sg_order)
