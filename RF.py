@@ -23,7 +23,6 @@ class RFpower:
         with open(fin) as f:
             datain = f.readlines()
 
-
         arr = []
         for line in datain:
 
@@ -49,6 +48,9 @@ class RFpower:
         self.P_fwd = P_fwd
         self.T_rev = t_rev - t0
         self.P_rev = P_rev
+
+        self.t_fwd_abs = t_fwd
+        self.t_rev_abs = t_rev
 
         self.data = np.array(arr)
         self.t0 = t0
@@ -78,6 +80,9 @@ class RFpower:
 
         return fig
 
+    def addPower(self, rf2):
+        pass
+
     def comboPlot(self, rf2):
 
         rf1 = self
@@ -93,12 +98,6 @@ class RFpower:
         p2_fwd = rf2.P_fwd
         p2_rev = rf2.P_rev
     
-        # plot
-        fig = plt.figure(layout="constrained", figsize=(10,8))
-        gs = GridSpec(3, 1, figure=fig)
-        ax0 = fig.add_subplot(gs[:-1])
-        ax1 = fig.add_subplot(gs[-1])
-    
         # need to interpolate
         t_axis = np.linspace( rf1.data[0,0], rf1.data[-1,0], 100 ) - rf1.t0
         p1_fwd_interp = np.interp(t_axis, t1_fwd, p1_fwd)
@@ -108,6 +107,12 @@ class RFpower:
         p2_rev_interp = np.interp(t_axis, t2_rev, p2_rev)
         P_rev_total = p1_rev_interp + p2_rev_interp
     
+        # plot
+        fig = plt.figure(layout="constrained", figsize=(10,8))
+        gs = GridSpec(3, 1, figure=fig)
+        ax0 = fig.add_subplot(gs[:-1])
+        ax1 = fig.add_subplot(gs[-1])
+
         ax0.plot(t_axis, P_fwd_total, 'C2', lw=3, label="Total Foward")
         ax0.plot(t_axis, P_rev_total, 'C3', lw=3, label="Total Reflected")
         ax0.plot(t1_fwd, p1_fwd, 'C0o--', mfc='none', label="Forward 1")
@@ -128,6 +133,12 @@ class RFpower:
         
         fig.suptitle(self.fname)
         fig.tight_layout()
+
+
+        # save data
+        self.P_fwd_total = P_fwd_total
+        self.P_rev_total = P_rev_total
+    
     
         return fig
         
