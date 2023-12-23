@@ -191,7 +191,7 @@ if __name__ == "__main__":
         r2 = False
     
     if r1 and r2:
-        comboPlot(d1,d2)
+        d1.comboPlot(d2)
     
     plt.show()
     
