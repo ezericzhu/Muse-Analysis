@@ -46,7 +46,7 @@ class DoubleProbe():
 
         self.time = time_long - time_long[0] # seconds
 
-        # interpret
+        # interpret IV
         self.V = self.AI2*V_FACTOR  # V 
         self.I = self.AI3*I_FACTOR # mA
 
@@ -213,16 +213,18 @@ class DoubleProbe():
                            sg_window = 50, # savgol window
                            sg_order = 3, # savgol polynomial order
                            plotRaw = False, # show the unscaled pressure data
-                           t_global = False, # use global time ref to match other diagnostics
+                           t_global = None, # use global time ref to match other diagnostics
                            save = False,
                            ):
 
-        V = self.AI0
-
-        if t_global:
+        try:
+            # set x-axis to global time
+            N = len(t_global) # fails if t_global is None
             time = t_global
-        else:
-           time = self.time
+        except:
+            time = self.time
+
+        V = self.AI0
 
         P_raw = 10**((V - 5.5)/0.5) # V -> P conversion from manual
         P_H2 = P_raw / 0.42 # -> H2 scale factor from manual
@@ -233,6 +235,9 @@ class DoubleProbe():
 
         if axs==None:
             fig,axs = plt.subplots(1,1)
+            axs.set_xlabel('s')
+            axs.set_title(self.fname)
+
         axs.plot(time, P_H2, 'C0.', label="pressure H2")
         axs.plot(time, P_H2_filter, 'C1.')
 
@@ -241,8 +246,6 @@ class DoubleProbe():
             axs.plot(time, P_raw_filter, 'C4.')
   
         axs.set_ylabel('Torr')
-        axs.set_xlabel('s')
-        axs.set_title(self.fname)
         axs.ticklabel_format(axis='y', style='sci', scilimits=(0,0) )
 
         axs.legend()
