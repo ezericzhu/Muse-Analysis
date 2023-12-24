@@ -30,8 +30,17 @@ t_gap = 2082844800.0
 ### Load Data
 
 # double probe
-probe = DoubleProbe(path+"NIDAQtext.txt")
-probe.plotIV()
+try:
+    probe = DoubleProbe(path+"NIDAQtext.txt")
+
+    if int(shot) < 231222000: # threshold for bias box change
+        probe.V_factor = 10
+        probe.I_factor = 97.8757/5
+
+    probe.plotIV()
+
+except:
+    print("no probe data")
 
 # spectroscopy
 try:
