@@ -122,10 +122,13 @@ probe.plotPressure(axs[2], t_global=T_probe)
 probe.plotPressure()
 axs[2].grid()
 
-axs[3].plot(T_probe, probe.V, label='V')
-axs[4].plot(T_probe, probe.I, label='mA')
+axs[3].plot(T_probe, probe.V, label='probe V')
+axs[4].plot(T_probe, probe.I, label='shunt I')
 
 axs[1].set_ylabel('RF Power (W)')
+axs[3].set_ylabel('V')
+axs[4].set_ylabel('mA')
+
 for a in axs:
     a.set_xlim(t_start, t_end) 
     a.legend()

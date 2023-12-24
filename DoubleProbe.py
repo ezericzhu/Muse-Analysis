@@ -46,10 +46,6 @@ class DoubleProbe():
 
         self.time = time_long - time_long[0] # seconds
 
-        # interpret IV
-        self.V = self.AI2*V_FACTOR  # V 
-        self.I = self.AI3*I_FACTOR # mA
-
         self.V_factor = V_FACTOR
         self.I_factor = I_FACTOR
    
@@ -120,6 +116,9 @@ class DoubleProbe():
         V_probe = self.AI2 * self.V_factor  # V
         I_probe = self.AI3 * self.I_factor # mA
         time = self.time # s
+
+        self.V = V_probe
+        self.I = I_probe
 
         def argNear(arr,val):
             return np.argmin( np.abs(arr - val) )
