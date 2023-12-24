@@ -24,6 +24,11 @@ path = f"data/{shot}/"
 fig,axs = plt.subplots(5,1, figsize=(12,9))
 axs[0].set_title(shot)
 
+# seconds between Jan 1 1904 and Jan 1 1970, both GMT midnight
+t_gap = 2082844800.0
+
+### Load Data
+
 # double probe
 probe = DoubleProbe(path+"NIDAQtext.txt")
 probe.plotIV()
@@ -32,8 +37,11 @@ probe.plotIV()
 try:
     path2 = glob(f"data/spectroscopy/*{shot}*txt")[0]
     spec = OceanSpectra(path2)
+    t_spec = spec.unix_time # ms from 1970
+    T_spec = t_spec/1e3  + t_gap # sec from 1904
     hasSpec = True
 except:
+    print("spectroscopy data not found")
     hasSpec = False
 
 # RF power
@@ -54,25 +62,18 @@ except:
 if hasRF1 and hasRF2:
     rf1.comboPlot(rf2)
 
+
+
+### Get Common Time
+T_probe = probe.unix_time # s from 1904
+
+
 # this will break if there is no RF1 data
 T_rf1_fwd = rf1.t_fwd_abs
 T_rf1_rev = rf1.t_rev_abs
 p1_fwd = rf1.P_fwd
 p1_rev = rf1.P_rev
 t0_global = T_rf1_fwd[0]
-
-# seconds between Jan 1 1904 and Jan 1 1970, both GMT midnight
-t_gap = 2082844800.0
-
-
-if hasSpec:
-    spec.plot2d(j=150)
-    t_spec = spec.unix_time # ms from 1970
-    T_spec = t_spec/1e3  + t_gap
-
-
-# get common time
-T_probe = probe.unix_time # s from 1904
 
 T_probe -= t0_global
 T_rf1_fwd -= t0_global
@@ -88,6 +89,8 @@ else:
     t_end = np.max([T_probe[-1], T_rf1_fwd[-1], T_rf1_rev[-1]]) #- t0_global
 
 
+### Plot
+
 if hasSpec:
     spec.findPeak(f0=656.279) #H-alpha
     spec.findPeak(f0=486.135) #H-beta
@@ -99,13 +102,15 @@ if hasSpec:
         axs[0].plot(T_spec, spec.lines[j], label=f"{spec.freqs[j]} nm")
     axs[0].set_ylabel('counts')
 
+    # make a second panel with 2D spectragram
+    spec.plot2d(j=150)
 
-# plot
+
 axs[1].plot(T_rf1_fwd, p1_fwd,'o-',label="P forward")
 axs[1].plot(T_rf1_rev, p1_rev,'o-',label="P reverse")
 
 probe.plotPressure(axs[2], t_global=T_probe)
-#probe.plotPressure()
+probe.plotPressure()
 axs[2].grid()
 
 axs[3].plot(T_probe, probe.V, label='V')
