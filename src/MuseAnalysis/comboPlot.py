@@ -4,7 +4,8 @@ from .OceanSpectra import OceanSpectra
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+# import sys
+import os
 
 from glob import glob
 from matplotlib.gridspec import GridSpec
@@ -21,14 +22,30 @@ def main():
     '''
 
     parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument("-t","--target")
+    parser.add_argument("-s","--show",action="store_true")
 
     args = parser.parse_args()
 
-    if args.help:
-        parser.print_help()
+    if hasattr(args, "help"):
+        if args.help:
+            parser.print_help()
+    if hasattr(args, "target"):
+        shot = args.target
+    else:
+        raise ValueError("No target specified")
+    if hasattr(args, "show"):
+        iflag_show = args.show
+    else:
+        iflag_show = False
 
-    shot = sys.argv[1]
-    path = f"data/{shot}/"
+    # shot = sys.argv[1]
+    
+    data_path = os.getenv("MUSE_DATA_PATH")
+    if data_path is None:
+        data_path = "./"
+    path = f"{data_path}{shot}/"
+    
 
     fig,axs = plt.subplots(5,1, figsize=(12,9))
     axs[0].set_title(shot)
@@ -46,7 +63,8 @@ def main():
             probe.V_factor = 10
             probe.I_factor = 97.8757/5
 
-        probe.plotIV()
+        probe.plotIV(save=path+"plotIV.png")
+        probe.plotRaw(save=path+"plotRaw.png")
 
     except:
         print("no probe data")
@@ -128,7 +146,7 @@ def main():
     axs[1].plot(T_rf1_rev, p1_rev,'o-',label="P reverse")
 
     probe.plotPressure(axs[2], t_global=T_probe)
-    probe.plotPressure()
+    # probe.plotPressure()
     axs[2].grid()
 
     axs[3].plot(T_probe, probe.V, label='probe V')
@@ -145,7 +163,9 @@ def main():
     axs[-1].set_xlabel('time (s)')
 
     fig.tight_layout()
-    plt.show()
+    fig.savefig(path+"plotTime.show")
+    if iflag_show:
+        plt.show()
 
 
 if __name__ == "__main__":
