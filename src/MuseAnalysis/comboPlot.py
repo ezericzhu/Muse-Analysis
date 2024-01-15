@@ -163,7 +163,7 @@ def main():
     axs[-1].set_xlabel('time (s)')
 
     fig.tight_layout()
-    fig.savefig(path+"plotTime.show")
+    fig.savefig(path+"plotTime.png")
     if iflag_show:
         plt.show()
 
