@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "MUSE-Analysis"
+version = "0.1.0"
+dependencies = ["numpy", "scipy", "matplotlib", "pandas"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/MuseAnalysis"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+comboPlot = "MuseAnalysis.comboPlot:main"
+loggen = "MuseAnalysis.collect_settings:main"
